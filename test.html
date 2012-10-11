@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Jits Test</title>
+<script type="text/javascript" src="jits.js"></script>
+<script type="text/javascript">
+window.onload = function () {
+  document.querySelector('#htmlframe').onload = function () {
+    jits = new JitsContext(this.contentDocument);
+  }
+}
+function load_html_url() {
+  document.querySelector('#htmlframe').src = document.querySelector('#htmlurl').value
+}
+function apply_linked_rules() {
+  jits.apply_its_linked_rules();
+}
+function create_test_output(category) {
+  document.querySelector('#testoutput').textContent = jits.create_test_output(category);
+}
+</script>
+</head>
+<body>
+<h1>Jits Test</h1>
+<div>
+<label for="htmlurl">HTML URL:</label>
+<input type="text" id="htmlurl" value="ex8.html">
+<input type="button" value="Load" onclick="load_html_url()">
+</div>
+<div>
+<input type="button" value="Apply Linked Rules" onclick="apply_linked_rules()">
+<input type="button" value="Create Test Output" onclick="create_test_output('translate')">
+</div>
+<div>
+<iframe id="htmlframe" width="600" height="400">
+</iframe>
+</div>
+<div>
+<pre id="testoutput">
+</pre>
+</body>
+</html>
