@@ -26,6 +26,7 @@ function JitsContext(doc) {
     this._its_translate_map = new _Map();
 
     this._NS_ITS = 'http://www.w3.org/2005/11/its';
+    this._NS_ITS_FUNC = function(prefix) { return 'http://www.w3.org/2005/11/its'; }
     this._isnsname = function(node, ns, name) {
         return node.namespaceURI == ns && node.localName == name;
     }
@@ -53,24 +54,31 @@ function JitsContext(doc) {
 }
 
 JitsContext.prototype.apply_its_file = function(url) {
+    var req = new XMLHttpRequest();
+    req.overrideMimeType('application/xml');
+    req.open('GET', url, false);
+    req.send();
+    if (req.status === 200 || req.status === 0) {
+        this.apply_its_rules(req.responseXML.documentElement);
+    }
 };
 
 JitsContext.prototype.apply_its_rules = function(rules) {
-    if (!this._isnsname(rules.documentElement, this._NS_ITS, 'rules')) {
+    if (!this._isnsname(rules, this._NS_ITS, 'rules')) {
         return;
     }
-    var itsver = rules.documentElement.getAttribute('version');
+    var itsver = rules.getAttribute('version');
     if (itsver != '1.0' && itsver != '2.0') {
         return;
     }
-    for (var i = 0; i < rules.documentElement.childNodes.length; i++) {
-        var rule = rules.documentElement.childNodes[i];
+    for (var i = 0; i < rules.childNodes.length; i++) {
+        var rule = rules.childNodes[i];
         if (rule.nodeType != Node.ELEMENT_NODE) {
             continue;
         }
         if (this._isnsname(rule, this._NS_ITS, 'translateRule')) {
             var selector = rule.getAttribute('selector');
-            var resolver = rules.createNSResolver(rule);
+            var resolver = rules.ownerDocument.createNSResolver(rule);
             var nodes = this.document.evaluate(selector, this.document, resolver,
                                                XPathResult.ANY_TYPE, null);
             for (var node = nodes.iterateNext(); node; node = nodes.iterateNext()) {
@@ -81,14 +89,17 @@ JitsContext.prototype.apply_its_rules = function(rules) {
 }
 
 JitsContext.prototype.apply_its_linked_rules = function() {
-    var lrules = this.document.querySelectorAll('head > link[rel = "its-rules"]');
-    for (var i = 0; i < lrules.length; i++) {
-        req = new XMLHttpRequest();
-        req.overrideMimeType('application/xml');
-        req.open('GET', this._resolve_url(lrules[i].getAttribute('href')), false);
-        req.send();
-        if (req.status === 200 || req.status === 0) {
-            this.apply_its_rules(req.responseXML);
+    if (this.document instanceof HTMLDocument) {
+        var lrules = this.document.querySelectorAll('head > link[rel = "its-rules"]');
+        for (var i = 0; i < lrules.length; i++) {
+            this.apply_its_file(this._resolve_url(lrules[i].getAttribute('href')));
+        }
+    }
+    else {
+        var lrules = this.document.evaluate('//its:rules', this.document, this._NS_ITS_FUNC,
+                                            XPathResult.ANY_TYPE, null);
+        for (var rules = lrules.iterateNext(); rules; rules = lrules.iterateNext()) {
+            this.apply_its_rules(rules);
         }
     }
 };
@@ -110,7 +121,7 @@ JitsContext.prototype.get_its_translate = function(node, attr) {
             }
         }
         else {
-            val = pnode.getAttributeNs(this._NS_ITS, 'translate');
+            val = pnode.getAttributeNS(this._NS_ITS, 'translate');
             if (val != undefined) {
                 return val;
             }
