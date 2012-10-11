@@ -10,6 +10,7 @@ function JitsContext(doc) {
                     return values[i];
                 }
             }
+            return null;
         }
         this.set = function(node, value) {
             for (var i = 0; i < keys.length; i++) {
@@ -24,6 +25,7 @@ function JitsContext(doc) {
     };
 
     this._its_translate_map = new _Map();
+    this._its_within_text_map = new _Map();
 
     this._NS_ITS = 'http://www.w3.org/2005/11/its';
     this._NS_ITS_FUNC = function(prefix) { return 'http://www.w3.org/2005/11/its'; }
@@ -51,6 +53,21 @@ function JitsContext(doc) {
         }
         return base.substring(0, si + 1) + url;
     }
+}
+
+JitsContext.prototype._get_its_attribute = function(node, xmlattr, htmlattr) {
+    var val;
+    if (this.document instanceof HTMLDocument) {
+        if (node.hasAttribute(htmlattr))
+            return node.getAttribute(htmlattr);
+    }
+    else {
+        if (node.hasAttributeNS(this._NS_ITS, xmlattr))
+            return node.getAttributeNS(this._NS_ITS, xmlattr);
+        if (this._isnsname(node, this._NS_ITS, 'span') && node.hasAttribute(xmlattr))
+            return node.getAttribute(xmlattr);
+    }
+    return null;
 }
 
 JitsContext.prototype.apply_its_file = function(url) {
@@ -85,6 +102,15 @@ JitsContext.prototype.apply_its_rules = function(rules) {
                 this._its_translate_map.set(node, rule.getAttribute('translate'));
             }
         }
+        else if (this._isnsname(rule, this._NS_ITS, 'withinTextRule')) {
+            var selector = rule.getAttribute('selector');
+            var resolver = rules.ownerDocument.createNSResolver(rule);
+            var nodes = this.document.evaluate(selector, this.document, resolver,
+                                               XPathResult.ANY_TYPE, null);
+            for (var node = nodes.iterateNext(); node; node = nodes.iterateNext()) {
+                this._its_within_text_map.set(node, rule.getAttribute('withinText'));
+            }
+        }
     }
 }
 
@@ -106,44 +132,49 @@ JitsContext.prototype.apply_its_linked_rules = function() {
 
 JitsContext.prototype.get_its_translate = function(node, attr) {
     var val;
-    if (attr != undefined) {
+    if (attr !== undefined) {
         val = this._its_translate_map.get(attr);
-        if (val != undefined) {
+        if (val !== null) {
             return val;
         }
         return 'no';
     }
     for (var pnode = node; pnode.nodeType != Node.DOCUMENT_NODE; pnode = pnode.parentNode) {
-        if (this.document instanceof HTMLDocument) {
-            val = pnode.getAttribute('translate');
-            if (val != undefined) {
-                return val;
-            }
-        }
-        else {
-            val = pnode.getAttributeNS(this._NS_ITS, 'translate');
-            if (val != undefined) {
-                return val;
-            }
-            if (this._isnsname(pnode, this._NS_ITS, 'span')) {
-                val = pnode.getAttribute('translate');
-                if (val != undefined) {
-                    return val;
-                }
-            }
+        val = this._get_its_attribute(pnode, 'translate', 'translate');
+        if (val !== null) {
+            return val;
         }
         val = this._its_translate_map.get(pnode);
-        if (val != undefined) {
+        if (val !== null) {
             return val;
         }
     }
     return 'yes';
 };
 
+JitsContext.prototype.get_its_within_text = function(node, attr) {
+    var val;
+    if (attr !== undefined) {
+        return null;
+    }
+    val = this._get_its_attribute(node, 'withinText', 'its-within-text');
+    if (val !== null) {
+        return val;
+    }
+    val = this._its_within_text_map.get(node);
+    if (val !== null) {
+        return val;
+    }
+    return 'no';
+};
+
 JitsContext.prototype.create_test_output = function(category) {
     var getval = function(ctxt, node, attr) {
         if (category == 'translate') {
             return 'translate="' + ctxt.get_its_translate(node, attr) + '"'
+        }
+        else if (category == 'withinText') {
+            return 'withinText="' + ctxt.get_its_within_text(node, attr) + '"'
         }
     };
     var ret = '';

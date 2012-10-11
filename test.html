@@ -15,8 +15,9 @@ function load_html_url() {
 function apply_linked_rules() {
   jits.apply_its_linked_rules();
 }
-function create_test_output(category) {
-  document.querySelector('#testoutput').textContent = jits.create_test_output(category);
+function create_test_output() {
+  document.querySelector('#testoutput').textContent =
+    jits.create_test_output(document.querySelector('#testcat').value);
 }
 </script>
 </head>
@@ -29,7 +30,13 @@ function create_test_output(category) {
 </div>
 <div>
 <input type="button" value="Apply Linked Rules" onclick="apply_linked_rules()">
-<input type="button" value="Create Test Output" onclick="create_test_output('translate')">
+</div>
+<div>
+<select id="testcat">
+<option>translate</option>
+<option>withinText</option>
+</select>
+<input type="button" value="Create Test Output" onclick="create_test_output()">
 </div>
 <div>
 <iframe id="htmlframe" width="600" height="400">
