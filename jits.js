@@ -29,6 +29,7 @@ function JitsContext(doc) {
 
     this._NS_ITS = 'http://www.w3.org/2005/11/its';
     this._NS_ITS_FUNC = function(prefix) { return 'http://www.w3.org/2005/11/its'; }
+    this._NS_XLINK = 'http://www.w3.org/1999/xlink'
     this._isnsname = function(node, ns, name) {
         return node.namespaceURI == ns && node.localName == name;
     }
@@ -76,12 +77,16 @@ JitsContext.prototype.apply_its_file = function(url) {
     req.open('GET', url, false);
     req.send();
     if (req.status === 200 || req.status === 0) {
-        this.apply_its_rules(req.responseXML.documentElement);
+        this.apply_its_rules(req.responseXML.documentElement, url);
     }
 };
 
-JitsContext.prototype.apply_its_rules = function(rules) {
+JitsContext.prototype.apply_its_rules = function(rules, url) {
     if (!this._isnsname(rules, this._NS_ITS, 'rules')) {
+        return;
+    }
+    if (rules.hasAttributeNS(this._NS_XLINK, 'href')) {
+        this.apply_its_file(this._resolve_url(rules.getAttributeNS(this._NS_XLINK, 'href'), url));
         return;
     }
     var itsver = rules.getAttribute('version');
@@ -125,7 +130,7 @@ JitsContext.prototype.apply_its_linked_rules = function() {
         var lrules = this.document.evaluate('//its:rules', this.document, this._NS_ITS_FUNC,
                                             XPathResult.ANY_TYPE, null);
         for (var rules = lrules.iterateNext(); rules; rules = lrules.iterateNext()) {
-            this.apply_its_rules(rules);
+            this.apply_its_rules(rules, this.document.baseURI);
         }
     }
 };
