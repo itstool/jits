@@ -108,6 +108,13 @@ JitsContext.prototype.apply_its_rules = function(rules, url) {
     if (itsver != '1.0' && itsver != '2.0') {
         return;
     }
+    var querylang = 'xpath';
+    if (rules.hasAttribute('queryLanguage')) {
+        querylang = rules.getAttribute('queryLanguage');
+    }
+    if (querylang != 'xpath' && querylang != 'css') {
+        return;
+    }
     for (var i = 0; i < rules.childNodes.length; i++) {
         var rule = rules.childNodes[i];
         if (rule.nodeType != Node.ELEMENT_NODE) {
@@ -116,19 +123,35 @@ JitsContext.prototype.apply_its_rules = function(rules, url) {
         if (this._isnsname(rule, this._NS_ITS, 'translateRule')) {
             var selector = rule.getAttribute('selector');
             var resolver = rules.ownerDocument.createNSResolver(rule);
-            var nodes = this.document.evaluate(selector, this.document, resolver,
-                                               XPathResult.ANY_TYPE, null);
-            for (var node = nodes.iterateNext(); node; node = nodes.iterateNext()) {
-                this._its_translate_map.set(node, rule.getAttribute('translate'));
+            if (querylang == 'xpath') {
+                var nodes = this.document.evaluate(selector, this.document, resolver,
+                                                   XPathResult.ANY_TYPE, null);
+                for (var node = nodes.iterateNext(); node; node = nodes.iterateNext()) {
+                    this._its_translate_map.set(node, rule.getAttribute('translate'));
+                }
+            }
+            else if (querylang == 'css') {
+                var nodes = this.document.querySelectorAll(selector);
+                for (var i = 0; i < nodes.length; i++) {
+                    this._its_translate_map.set(nodes[i], rule.getAttribute('translate'));
+                }
             }
         }
         else if (this._isnsname(rule, this._NS_ITS, 'withinTextRule')) {
             var selector = rule.getAttribute('selector');
             var resolver = rules.ownerDocument.createNSResolver(rule);
-            var nodes = this.document.evaluate(selector, this.document, resolver,
-                                               XPathResult.ANY_TYPE, null);
-            for (var node = nodes.iterateNext(); node; node = nodes.iterateNext()) {
-                this._its_within_text_map.set(node, rule.getAttribute('withinText'));
+            if (querylang == 'xpath') {
+                var nodes = this.document.evaluate(selector, this.document, resolver,
+                                                   XPathResult.ANY_TYPE, null);
+                for (var node = nodes.iterateNext(); node; node = nodes.iterateNext()) {
+                    this._its_within_text_map.set(node, rule.getAttribute('withinText'));
+                }
+            }
+            else if (querylang == 'css') {
+                var nodes = this.document.querySelectorAll(selector);
+                for (var i = 0; i < nodes.length; i++) {
+                    this._its_within_text_map.set(nodes[i], rule.getAttribute('translate'));
+                }
             }
         }
     }
