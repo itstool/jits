@@ -71,6 +71,21 @@ JitsContext.prototype._get_its_attribute = function(node, xmlattr, htmlattr) {
     return null;
 }
 
+JitsContext.prototype.get_its_rules_version = function(rules) {
+    if (!this._isnsname(rules, this._NS_ITS, 'rules')) {
+        return null;
+    }
+    if (rules.hasAttribute('version')) {
+        return rules.getAttribute('version');
+    }
+    for (var node = rules; node.nodeType != Node.DOCUMENT_NODE; node = node.parentNode) {
+        if (node.hasAttributeNS(this._NS_ITS, 'version')) {
+            return node.getAttributeNS(this._NS_ITS, 'version');
+        }
+    }
+    return null;
+}
+
 JitsContext.prototype.apply_its_file = function(url) {
     var req = new XMLHttpRequest();
     req.overrideMimeType('application/xml');
@@ -89,7 +104,7 @@ JitsContext.prototype.apply_its_rules = function(rules, url) {
         this.apply_its_file(this._resolve_url(rules.getAttributeNS(this._NS_XLINK, 'href'), url));
         return;
     }
-    var itsver = rules.getAttribute('version');
+    var itsver = this.get_its_rules_version(rules);
     if (itsver != '1.0' && itsver != '2.0') {
         return;
     }
